@@ -78,7 +78,7 @@
 
 // --------------------- Debug Mode ---------------------
 // #define DEBUG  // switch to (de)activate serial debug output
-#define PLOTTER  // switch to (de)activate serial plotter output
+// #define PLOTTER  // switch to (de)activate serial plotter output
 
 #ifdef DEBUG
 #define DEBUG_PRINT(x) Serial.print(F(x))
