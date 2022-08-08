@@ -33,6 +33,7 @@
     - Rotary encoder KY-040 (VCC: 5V; Clk + DT: digital; SW: digital interrupt)
     - Current sensor ACS712 30A (VCC: 5V; data: analog)
     - Voltage sensor 38V (VCC: 5V; data: analog)
+    - LED (VCC: digital)
 
   --------------------------------------------
   Arduino pin layout:
