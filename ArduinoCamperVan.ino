@@ -101,12 +101,13 @@
 #define ROTARY_PIN_DT 5       // Rotary data pin (digital)
 #define ROTARY_PIN_CLK 6      // Rotary clock pin (digital)
 #define DHT_PIN 7             // DHT data pin (digital)
-#define WATER_LED_PIN 8             // LED pin (digital)
+#define WATER_LED_PIN 8       // LED pin (digital)
 #define VOLTAGE_PIN A0        // Voltage read pin (analog)
 #define CURRENT_PIN A1        // Current read pin (analog)
 
 #define DHT_HISTORY_COUNT 12  // Number of DHT history data
 #define MPU_HISTORY_COUNT 10  // Number of MPU history data
+#define DC_ENERGY_COUNT 24    // Number of DC energy history data
 #define STANDBY_DELAY 30      // Time till standby (in s)
 
 // --------------------- Data struct types ---------------------
@@ -137,9 +138,11 @@ struct WaterDataType  // Water data type as struct
 
 struct DCDataType  // Data type for DC information
 {
-    float voltage;  // Voltage value in V
-    float current;  // Current value in A
-    float power;    // Power value in W
+    float voltage;                    // Voltage value in V
+    float current;                    // Current value in A
+    float power;                      // Power value in W
+    float energy;                     // Energy accumulation of the last hour
+    float energy24[DC_ENERGY_COUNT];  // Energy data in Ah of the last 24 hours
 };
 
 // --------------- Classes & Data structs ---------------
@@ -213,11 +216,12 @@ void loop() {
     }
 
     // Sensor readings:
-    if (millis() - timestampSensors > 500) {
+    unsigned long dtSensor = millis() - timestampSensors;
+    if (dtSensor > 500) {
         // DEBUG_PRINTLN("Reading sensor data...");
         timestampSensors = millis();
         MPU.getData();
-        DCData = DC_getData();
+        DCData = DC_getData(dtSensor);
         WaterData = getWaterData();
         pushFloatArray(MPUHistory.phiX, MPU.data.phiX, MPU_HISTORY_COUNT);
         pushFloatArray(MPUHistory.phiY, MPU.data.phiY, MPU_HISTORY_COUNT);
@@ -235,7 +239,9 @@ void loop() {
     // Every full hour: -> Save DHT data to arrays
     if (RTC.isAlarm1()) {
         RTC.getDateTime();  // update datetime, to prevent offsync between alarm timing and datetime update.
-        // Even hour (every 2 hours): -> save data
+        pushFloatArray(DCData.energy24, DCData.energy, DC_ENERGY_COUNT);
+        DCData.energy = 0;
+        // Even hour (every 2 hours): -> save DHT data
         if (RTC.t.hour % 2 == 0) {
             DEBUG_PRINTLN("Even hour, saving DHT data...");
             pushInt8Array(DHTHistory.hour, RTC.t.hour, DHT_HISTORY_COUNT);
@@ -322,16 +328,18 @@ void rotary_setup() {
 
 /*
  * Read analog values from the DC pins.
- * @return DC information (volate & current)
+ * Calculate power and energy consumption.
+ * @return DC struct
  */
-DCDataType DC_getData() {
+DCDataType DC_getData(unsigned long dt) {
     int VVraw = analogRead(VOLTAGE_PIN);                        // Raw voltage value at the voltage sensor pin
     float VVout = analogRead(VOLTAGE_PIN) * 5.0 / 1024.0;       // Voltage value in V of the voltage sensor (1024: 10bit resolution)
     float voltage = VVout / 0.2;                                // Input voltage in V of the voltage sensor Vout = Vin / (R2/(R1+R2)); R1=30k, R2=7.5k
     int VIraw = analogRead(CURRENT_PIN);                        // Raw voltage value at the current sensor pin
     float VIout = (analogRead(CURRENT_PIN) * 5000.0 / 1024.0);  // Voltage value in mV of the current sensor (1024: 10bit resolution)
     float current = ((VIout - 2500.0) / 66.2);                  // Current value in A of the current sensor (2500 mV offset, 66 A/mV)
-    float power = voltage * current;
+    float power = voltage * current;                            // Power value in W
+    float energy = DCData.energy + (current * dt / 1000);       // Accumulate the used energy in Ah
     // DEBUG_PRINT("VVraw=");
     // DEBUG_PRINTVAR(VVraw);
     // DEBUG_PRINT(", VVout=");
@@ -344,7 +352,7 @@ DCDataType DC_getData() {
     // DEBUG_PRINTVAR(VIout);
     // DEBUG_PRINT(", I=");
     // DEBUG_PRINTVARLN(current);
-    return {voltage, current, power};
+    return {voltage, current, power, energy};
 }
 
 /*
@@ -370,14 +378,14 @@ WaterDataType getWaterData() {
         if (!newWaterData.fresh) {
             // Fresh water gets empty
             DEBUG_PRINTLN("Freshwater minimum reached!");
-            digitalWrite(WATER_LED_PIN, HIGH); // turn on LED
+            digitalWrite(WATER_LED_PIN, HIGH);  // turn on LED
             timestampIdle = millis();
             if (display.getDisplayState() == STANDBY) {
                 display_wake_up();
             }
         } else {
             // Fresh water has been refilled
-            digitalWrite(WATER_LED_PIN, LOW); // turn off LED
+            digitalWrite(WATER_LED_PIN, LOW);  // turn off LED
         }
     }
 
@@ -583,6 +591,7 @@ void display_menu_battery() {
     display.renderBatteryVoltage(DCData.voltage, 4);
     display.renderBatteryCurrent(DCData.current, 5);
     display.renderBatteryPower(DCData.power, 6);
+    display.renderBatteryEnergy(DCData.energy24, DC_ENERGY_COUNT, 7);
 }
 
 /*

@@ -220,7 +220,7 @@ void displayOscar::renderBatteryCurrent(float current, uint8_t lineNr) {
 }
 
 /*
- * Render information about the battery power left by.
+ * Render information about the battery power.
  * Fills the whole line.
  * @param power Power in W
  * @param lineNr Line position Y (0-7) to render to. Default: 0
@@ -230,6 +230,29 @@ void displayOscar::renderBatteryPower(float power, uint8_t lineNr) {
     char helper[25];
     dtostrf(power, 5, 1, helper);
     sprintf(buffer, "Leistung:");
+    printFixed(calcCursorX(0), calcCursorY(lineNr), buffer);
+    buffer[0] = 0;
+    sprintf(buffer, "%5s W", helper);
+    printFixed(calcCursorX(14), calcCursorY(lineNr), buffer);
+}
+
+/*
+ * Render information about the battery energy consumption of the last hours.
+ * Fills the whole line.
+ * @param energy24 Energy array in Ah of the last hours
+ * @param lineNr Line position Y (0-7) to render to. Default: 0
+ */
+void displayOscar::renderBatteryEnergy(float* energy24, uint8_t count, uint8_t lineNr) {
+    float energy = 0;
+    for (uint8_t i = 0; i <= count; i++) {
+        energy += energy24[i];
+    }
+
+    char buffer[25];
+    char helper[25];
+    
+    dtostrf(energy, 5, 1, helper);
+    sprintf(buffer, "Verbrauch:");
     printFixed(calcCursorX(0), calcCursorY(lineNr), buffer);
     buffer[0] = 0;
     sprintf(buffer, "%5s W", helper);
