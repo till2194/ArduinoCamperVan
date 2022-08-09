@@ -155,8 +155,8 @@ DHTDataType DHTData;                                    // DHT struct from the D
 DHTHistoryType DHTHistory;                              // DHT struct for DHT sensor history
 Rotary rotary = Rotary(ROTARY_PIN_DT, ROTARY_PIN_CLK);  // Rotary Definition als Poll
 WaterDataType WaterData = {true, false};                // Water struct for freshwater and greywater sensors
-DCDataType DCData;
-displayOscar display(-1);  // Display class inherited from lcdgfx
+DCDataType DCData;                                      // DC struct for current, voltage and power
+displayOscar display(-1);                               // Display class inherited from lcdgfx
 
 // ------------------ Global Variables ------------------
 unsigned long timestampIdle = 0;       // Timestamp since last user action
