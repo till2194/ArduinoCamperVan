@@ -255,8 +255,8 @@ void displayOscar::renderBatteryEnergy(float* energy24, uint8_t count, uint8_t l
     sprintf(buffer, "Verbrauch:");
     printFixed(calcCursorX(0), calcCursorY(lineNr), buffer);
     buffer[0] = 0;
-    sprintf(buffer, "%5s W", helper);
-    printFixed(calcCursorX(14), calcCursorY(lineNr), buffer);
+    sprintf(buffer, "%5s Ah", helper);
+    printFixed(calcCursorX(13), calcCursorY(lineNr), buffer);
 }
 
 /*

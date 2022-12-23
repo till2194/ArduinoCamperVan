@@ -33,6 +33,7 @@
     - Rotary encoder KY-040 (VCC: 5V; Clk + DT: digital; SW: digital interrupt)
     - Current sensor ACS712 30A (VCC: 5V; data: analog)
     - Voltage sensor 38V (VCC: 5V; data: analog)
+    - LED (VCC: digital)
 
   --------------------------------------------
   Arduino pin layout:
@@ -154,7 +155,7 @@ DHTDataType DHTData;                                    // DHT struct from the D
 DHTHistoryType DHTHistory;                              // DHT struct for DHT sensor history
 Rotary rotary = Rotary(ROTARY_PIN_DT, ROTARY_PIN_CLK);  // Rotary Definition als Poll
 WaterDataType WaterData = {true, false};                // Water struct for freshwater and greywater sensors
-DCDataType DCData;                                      // Data struct for DC information
+DCDataType DCData;                                      // DC struct for current, voltage and power
 displayOscar display(-1);                               // Display class inherited from lcdgfx
 
 // ------------------ Global Variables ------------------
