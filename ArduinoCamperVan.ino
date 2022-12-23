@@ -154,8 +154,8 @@ DHTDataType DHTData;                                    // DHT struct from the D
 DHTHistoryType DHTHistory;                              // DHT struct for DHT sensor history
 Rotary rotary = Rotary(ROTARY_PIN_DT, ROTARY_PIN_CLK);  // Rotary Definition als Poll
 WaterDataType WaterData = {true, false};                // Water struct for freshwater and greywater sensors
-DCDataType DCData;
-displayOscar display(-1);  // Display class inherited from lcdgfx
+DCDataType DCData;                                      // Data struct for DC information
+displayOscar display(-1);                               // Display class inherited from lcdgfx
 
 // ------------------ Global Variables ------------------
 unsigned long timestampIdle = 0;       // Timestamp since last user action
@@ -167,6 +167,7 @@ unsigned long timestampInterrupt = 0;  // Timestamp since last interrupt
 void setup() {
 #if defined(DEBUG) || defined(PLOTTER)
     Serial.begin(9600);
+    int sizeTimestamps = sizeof(timestampIdle) + sizeof(timestampDisplay) + sizeof(timestampInterrupt) + sizeof(timestampSensors);
 #endif
     DEBUG_PRINTLN("Byte sizes of:");
     DEBUG_PRINT("dht_sensor: ");
@@ -187,7 +188,6 @@ void setup() {
     DEBUG_PRINTVARLN((int)sizeof(display));
     DEBUG_PRINT("WaterData: ");
     DEBUG_PRINTVARLN((int)sizeof(WaterData));
-    int sizeTimestamps = sizeof(timestampIdle) + sizeof(timestampDisplay) + sizeof(timestampInterrupt) + sizeof(timestampSensors);
     DEBUG_PRINT("timestamps: ");
     DEBUG_PRINTVARLN(sizeTimestamps);
 
