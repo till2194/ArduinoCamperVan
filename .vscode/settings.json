@@ -1,0 +1,5 @@
+{
+    "arduino.useArduinoCli": true,
+    "arduino.ignoreBoards": [],
+    "C_Cpp.default.compilerPath": ""
+}
