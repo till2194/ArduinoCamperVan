@@ -206,6 +206,7 @@ unsigned long timestampInterrupt = 0;  // Timestamp since last interrupt
 void setup() {
 #if defined(DEBUG) || defined(PLOTTER)
     Serial.begin(9600);
+    int sizeTimestamps = sizeof(timestampIdle) + sizeof(timestampDisplay) + sizeof(timestampInterrupt) + sizeof(timestampSensors);
 #endif
     DEBUG_PRINTLN("Byte sizes of:");
     DEBUG_PRINT("dht_sensor: ");
@@ -226,7 +227,6 @@ void setup() {
     DEBUG_PRINTVARLN((int)sizeof(display));
     DEBUG_PRINT("WaterData: ");
     DEBUG_PRINTVARLN((int)sizeof(WaterData));
-    int sizeTimestamps = sizeof(timestampIdle) + sizeof(timestampDisplay) + sizeof(timestampInterrupt) + sizeof(timestampSensors);
     DEBUG_PRINT("timestamps: ");
     DEBUG_PRINTVARLN(sizeTimestamps);
 
