@@ -25,55 +25,6 @@
   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
   --------------------------------------------
-  List of sensors:
-    - Gyroscope and accelerometer MPU6050 GY-521 (I2C)
-        - VCC 3.3V
-        - GND
-        - SCL
-        - SDA
-        - XCL
-        - XDA
-        - AD0 -> VCC 3.3V (high for different I2C ID active)
-        - INT
-    - Real time clock module RTC DS3231 (3.3V I2C)
-        - GND (brown)
-        - VCC 3.3V (red)
-        - SDA (green)
-        - SCL (orange)
-        - SQW
-        - 32K
-    - 1.3" OLED display SH1106 128x64 (I2C)
-        - VDD 3.3V (black)
-        - GND (white)
-        - SCK (grey)
-        - SDA (purple)
-    - Rotary encoder KY-040 
-        - GND (brown)
-        - +/VCC 5V (red)
-        - SW interrupt (orange)
-        - DT digital (yellow)
-        - CLK digital (green)
-    - Temperature and humidity sensor DHT11
-        - GND (right pin)
-        - VCC 5V
-        - Data digtal (left pin)
-    - Current sensor ACS712 30A
-        - VCC 5V (yellow)
-        - OUT analog (blue)
-        - GND (black)
-    - Voltage sensor <25V
-        - -/GND (black)
-        - +/VCC 5V (yellow)
-        - S/Data analog (green)
-    - Water level switch grey water
-        - VCC (white)
-        - GND (black)
-    - Water level switch fresh water
-        - VCC (purple)
-        - GND (grey)
-    - LED (VCC: digital)
-
-  --------------------------------------------
   Arduino pin layout:
         3.3V <-> 3.3V distribution
           5V <-> 5V distribution
