@@ -21,13 +21,13 @@ Arduino project for a camper van. Includes serveral sensors and a display to sho
 
 ## List of sensor pin connection:
 1. Gyroscope and accelerometer MPU6050 GY-521 (3.3V I2C)
-    - VCC 3.3V
-    - GND
-    - SCL
-    - SDA
+    - VCC 3.3V (red)
+    - GND (brown)
+    - SCL (orange)
+    - SDA (yellow)
     - XCL
     - XDA
-    - AD0 -> VCC 3.3V (high for different I2C ID active)
+    - AD0 -> VCC 3.3V (high for different I2C ID active) (black)
     - INT
 2. Real time clock module RTC DS3231 (3.3V I2C)
     - GND (brown)
@@ -36,6 +36,10 @@ Arduino project for a camper van. Includes serveral sensors and a display to sho
     - SCL (orange)
     - SQW
     - 32K
+    - Out GND (brown)
+    - Out VCC 3.3V (red)
+    - Out SDA (yellow)
+    - Out SCL (orange)
 3. 1.3" OLED display SH1106 128x64 (I2C)
     - VDD 3.3V (black)
     - GND (white)
