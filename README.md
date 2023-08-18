@@ -69,4 +69,9 @@ Arduino project for a camper van. Includes serveral sensors and a display to sho
 9. Water level switch fresh water
     - VCC (purple)
     - GND (grey)
-10. LED (VCC: digital)
+10. LED Back
+    - VCC (red)
+    - GND (black)
+11. LED Front
+    - VCC (orange)
+    - GND (brown)
