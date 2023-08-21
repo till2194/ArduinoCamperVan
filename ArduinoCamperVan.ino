@@ -210,6 +210,7 @@ void loop() {
     if (dtSensor > 500) {
         // DEBUG_PRINTLN("Reading sensor data...");
         timestampSensors = millis();
+        RTC.getDateTime();
         MPU.getData();
         DCData = DC_getData(dtSensor);
         WaterData = getWaterData();
@@ -222,9 +223,6 @@ void loop() {
     if (DHT_read(&DHTData.temperature, &DHTData.humidity) == true) {
         // DEBUG_PRINTLN("Reading DHT sensor...");
     }
-
-    // Get new time data
-    RTC.getDateTime();
 
     // Every full hour: -> Save DHT data to arrays
     if (RTC.isAlarm1()) {
