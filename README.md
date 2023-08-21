@@ -52,9 +52,9 @@ Arduino project for a camper van. Includes serveral sensors and a display to sho
     - DT digital (yellow)
     - CLK digital (green)
 5. Temperature and humidity sensor DHT11
-    - GND (right pin)
-    - VCC 5V
-    - Data digtal (left pin)
+    - GND (brown, right pin)
+    - VCC 5V (orange)
+    - Data digtal (red, left pin)
 6. Current sensor ACS712 30A
     - VCC 5V (yellow)
     - OUT analog (blue)
