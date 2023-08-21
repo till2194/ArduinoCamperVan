@@ -141,16 +141,16 @@ void displayOscar::renderAngles(float phiX, float phiY, uint8_t lineNr) {
 void displayOscar::renderYesNo(bool yes, uint8_t lineNr) {
     char buffer[25];
     if (yes) {
-        sprintf(buffer, "->Ja?");
+        sprintf(buffer, "  Nein?");
         printFixed(calcCursorX(4), calcCursorY(lineNr), buffer);
         buffer[0] = 0;
-        sprintf(buffer, "  Nein?");
+        sprintf(buffer, "->Ja?");
         printFixed(calcCursorX(12), calcCursorY(lineNr), buffer);
     } else {
-        sprintf(buffer, "  Ja?");
+        sprintf(buffer, "->Nein?");
         printFixed(calcCursorX(4), calcCursorY(lineNr), buffer);
         buffer[0] = 0;
-        sprintf(buffer, "->Nein?");
+        sprintf(buffer, "  Ja?");
         printFixed(calcCursorX(12), calcCursorY(lineNr), buffer);
     }
 }
@@ -239,10 +239,12 @@ void displayOscar::renderBatteryPower(float power, uint8_t lineNr) {
 /*
  * Render information about the battery energy consumption of the last hours.
  * Fills the whole line.
- * @param energy24 Energy array in Ah of the last hours
+ * @param energy24 Energy array in Ah of the last count hours
+ * @param count Number of entries in energy24
  * @param lineNr Line position Y (0-7) to render to. Default: 0
  */
 void displayOscar::renderBatteryEnergy(float* energy24, uint8_t count, uint8_t lineNr) {
+    // calculate the sum of energy entries
     float energy = 0;
     for (uint8_t i = 0; i <= count; i++) {
         energy += energy24[i];

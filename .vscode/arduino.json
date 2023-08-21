@@ -1,4 +1,5 @@
 {
     "board": "arduino:avr:uno",
-    "sketch": "ArduinoCamperVan.ino"
+    "sketch": "ArduinoCamperVan.ino",
+    "port": "COM3"
 }
