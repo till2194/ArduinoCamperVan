@@ -98,7 +98,7 @@
 #define DHT_HISTORY_COUNT 12  // Number of DHT history data
 #define MPU_HISTORY_COUNT 10  // Number of MPU history data
 #define DC_ENERGY_COUNT 24    // Number of DC energy history data
-#define STANDBY_DELAY 30      // Time till standby (in s)
+#define STANDBY_DELAY 60      // Time till standby (in s)
 
 // --------------------- Data struct types ---------------------
 struct DHTDataType  // DHT data type as a struct
@@ -594,7 +594,7 @@ void display_menu_DHT() {
         // show scrolling
         sprintf(buffer, "Vergangene Werte:<->");
     } else {
-        sprintf(buffer, "Vergangene Werte:");
+        sprintf(buffer, "Vergangene Werte:   ");
     }
     display.renderText(buffer, 0, 2);
 
