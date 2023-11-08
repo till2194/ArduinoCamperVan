@@ -25,55 +25,6 @@
   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
   --------------------------------------------
-  List of sensors:
-    - Gyroscope and accelerometer MPU6050 GY-521 (I2C)
-        - VCC 3.3V
-        - GND
-        - SCL
-        - SDA
-        - XCL
-        - XDA
-        - AD0 -> VCC 3.3V (high for different I2C ID active)
-        - INT
-    - Real time clock module RTC DS3231 (3.3V I2C)
-        - GND (brown)
-        - VCC 3.3V (red)
-        - SDA (green)
-        - SCL (orange)
-        - SQW
-        - 32K
-    - 1.3" OLED display SH1106 128x64 (I2C)
-        - VDD 3.3V (black)
-        - GND (white)
-        - SCK (grey)
-        - SDA (purple)
-    - Rotary encoder KY-040 
-        - GND (brown)
-        - +/VCC 5V (red)
-        - SW interrupt (orange)
-        - DT digital (yellow)
-        - CLK digital (green)
-    - Temperature and humidity sensor DHT11
-        - GND (right pin)
-        - VCC 5V
-        - Data digtal (left pin)
-    - Current sensor ACS712 30A
-        - VCC 5V (yellow)
-        - OUT analog (blue)
-        - GND (black)
-    - Voltage sensor <25V
-        - -/GND (black)
-        - +/VCC 5V (yellow)
-        - S/Data analog (green)
-    - Water level switch grey water
-        - VCC (white)
-        - GND (black)
-    - Water level switch fresh water
-        - VCC (purple)
-        - GND (grey)
-    - LED (VCC: digital)
-
-  --------------------------------------------
   Arduino pin layout:
         3.3V <-> 3.3V distribution
           5V <-> 5V distribution
@@ -147,7 +98,7 @@
 #define DHT_HISTORY_COUNT 12  // Number of DHT history data
 #define MPU_HISTORY_COUNT 10  // Number of MPU history data
 #define DC_ENERGY_COUNT 24    // Number of DC energy history data
-#define STANDBY_DELAY 30      // Time till standby (in s)
+#define STANDBY_DELAY 60      // Time till standby (in s)
 
 // --------------------- Data struct types ---------------------
 struct DHTDataType  // DHT data type as a struct
@@ -177,11 +128,11 @@ struct WaterDataType  // Water data type as struct
 
 struct DCDataType  // Data type for DC information
 {
-    float voltage;                    // Voltage value in V
-    float current;                    // Current value in A
-    float power;                      // Power value in W
-    float energy;                     // Energy accumulation of the last hour
-    float energy24[DC_ENERGY_COUNT];  // Energy data in Ah of the last 24 hours
+    float voltage;                      // Voltage value in V
+    float current;                      // Current value in A
+    float power;                        // Power value in W
+    float energy;                       // Energy accumulation Ah of the last hour
+    float energy24[DC_ENERGY_COUNT];    // Energy data in Ah of the last 24 hours
 };
 
 // --------------- Classes & Data structs ---------------
@@ -284,9 +235,10 @@ void loop() {
     // Every full hour: -> Save DHT data to arrays
     if (RTC_device.isAlarm1()) {
         RTC_device.getDateTime();  // update datetime, to prevent offsync between alarm timing and datetime update.
+        // Every full hour: -> Save Energy Data to array
         pushFloatArray(DCData.energy24, DCData.energy, DC_ENERGY_COUNT);
         DCData.energy = 0;
-        // Even hour (every 2 hours): -> save DHT data
+        // Even hour (every 2 hours): -> save DHT data to arrays
         if (RTC_device.t.hour % 2 == 0) {
             DEBUG_PRINTLN("Even hour, saving DHT data...");
             pushInt8Array(DHTHistory.hour, RTC_device.t.hour, DHT_HISTORY_COUNT);
@@ -375,16 +327,17 @@ void rotary_setup() {
  * Read analog values from the DC pins.
  * Calculate power and energy consumption.
  * @return DC struct
+ * @param dt time since last update in ms
  */
 DCDataType DC_getData(unsigned long dt) {
-    int VVraw = analogRead(VOLTAGE_PIN);                        // Raw voltage value at the voltage sensor pin
-    float VVout = analogRead(VOLTAGE_PIN) * 5.0 / 1024.0;       // Voltage value in V of the voltage sensor (1024: 10bit resolution)
-    float voltage = VVout / 0.2;                                // Input voltage in V of the voltage sensor Vout = Vin / (R2/(R1+R2)); R1=30k, R2=7.5k
-    int VIraw = analogRead(CURRENT_PIN);                        // Raw voltage value at the current sensor pin
-    float VIout = (analogRead(CURRENT_PIN) * 5000.0 / 1024.0);  // Voltage value in mV of the current sensor (1024: 10bit resolution)
-    float current = ((VIout - 2500.0) / 66.2);                  // Current value in A of the current sensor (2500 mV offset, 66 A/mV)
-    float power = voltage * current;                            // Power value in W
-    float energy = DCData.energy + (current * dt / 1000);       // Accumulate the used energy in Ah
+    int VVraw = analogRead(VOLTAGE_PIN);                                // Raw voltage value at the voltage sensor pin
+    float VVout = analogRead(VOLTAGE_PIN) * 5.0 / 1024.0;               // Voltage value in V of the voltage sensor (1024: 10bit resolution)
+    float voltage = VVout / 0.2;                                        // Input voltage in V of the voltage sensor Vout = Vin / (R2/(R1+R2)); R1=30k, R2=7.5k
+    int VIraw = analogRead(CURRENT_PIN);                                // Raw voltage value at the current sensor pin
+    float VIout = (analogRead(CURRENT_PIN) * 5000.0 / 1024.0);          // Voltage value in mV of the current sensor (1024: 10bit resolution)
+    float current = ((VIout - 2500.0) / 66.2);                          // Current value in A of the current sensor (2500 mV offset, 66 A/mV)
+    float power = voltage * current;                                    // Power value in W
+    float energy = DCData.energy + (current * dt / 1000 / 60 / 60);     // Accumulate the used energy in Ah
     // DEBUG_PRINT("VVraw=");
     // DEBUG_PRINTVAR(VVraw);
     // DEBUG_PRINT(", VVout=");
@@ -501,11 +454,11 @@ void rotary_interrupt() {
                     case 0:
                         display.setMenuItem(1);
                         break;
-                    case 1:  // yes
-                        restartFunc();
-                        break;
-                    case 2:  // no
+                    case 1:  // no
                         display.setMenuItem(0);
+                        break;
+                    case 2:  // yes
+                        restartFunc();
                         break;
                     default:
                         break;
@@ -645,17 +598,13 @@ void display_menu_battery() {
 void display_menu_DHT() {
     display_render_header();
     char buffer[25];
-    sprintf(buffer, "Vergangene Werte:");
-    display.renderText(buffer, 0, 2);
-
-    if (display.getMenuItem() > 0) {
+    if (display.getMenuItem() == 1) {
         // show scrolling
-        buffer[0] = 0;
-        sprintf(buffer, "<-->");
-        display.renderText(buffer, 9, 7);
+        sprintf(buffer, "Vergangene Werte:<->");
     } else {
-        display.clearLine(7);
+        sprintf(buffer, "Vergangene Werte:   ");
     }
+    display.renderText(buffer, 0, 2);
 
     uint8_t start = display.getMenuItem() == 0 ? 0 : display.getMenuItem() - 1;
     uint8_t end = min(start + 5, DHT_HISTORY_COUNT - 1);  // only 6 items fit on the display (0-5)
@@ -679,10 +628,10 @@ void display_menu_restart() {
     display.renderText(buffer, 5, 3);
     switch (display.getMenuItem()) {
         case 1:
-            display.renderYesNo(true, 5);
+            display.renderYesNo(false, 5);
             break;
         case 2:
-            display.renderYesNo(false, 5);
+            display.renderYesNo(true, 5);
             break;
         default:
             display.clearLine(5);
