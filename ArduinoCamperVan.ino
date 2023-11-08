@@ -116,7 +116,7 @@
 #include "display.h"          // Display based on lcdgfx library https://github.com/lexus2k/lcdgfx
 
 // --------------------- Debug Mode ---------------------
-// #define DEBUG  // switch to (de)activate serial debug output
+#define DEBUG    // switch to (de)activate serial debug output
 // #define PLOTTER  // switch to (de)activate serial plotter output
 
 #ifdef DEBUG
@@ -185,9 +185,9 @@ struct DCDataType  // Data type for DC information
 };
 
 // --------------- Classes & Data structs ---------------
-MPU6050 MPU = MPU6050(MPU_I2C_ADDR);                    // MPU6050 accelerometer & gyrosope device
+MPU6050 MPU_device = MPU6050(MPU_I2C_ADDR);             // MPU6050 accelerometer & gyrosope device
 MPUHistoryType MPUHistory;                              // MPU History data struct with phix and phiy
-DS3231 RTC;                                             // DS3231 clock device
+DS3231 RTC_device;                                      // DS3231 clock device
 DHT_nonblocking dht_sensor(DHT_PIN, DHT_TYPE);          // DHT class (pin, sensor_type)
 DHTDataType DHTData;                                    // DHT struct from the DHT sensor
 DHTHistoryType DHTHistory;                              // DHT struct for DHT sensor history
@@ -216,11 +216,11 @@ void setup() {
     DEBUG_PRINT("DHTHistory: ");
     DEBUG_PRINTVARLN((int)sizeof(DHTHistory));
     DEBUG_PRINT("MPU: ");
-    DEBUG_PRINTVARLN((int)sizeof(MPU));
+    DEBUG_PRINTVARLN((int)sizeof(MPU_device));
     DEBUG_PRINT("MPUHistory: ");
     DEBUG_PRINTVARLN((int)sizeof(MPUHistory));
     DEBUG_PRINT("RTC: ");
-    DEBUG_PRINTVARLN((int)sizeof(RTC));
+    DEBUG_PRINTVARLN((int)sizeof(RTC_device));
     DEBUG_PRINT("rotary: ");
     DEBUG_PRINTVARLN((int)sizeof(rotary));
     DEBUG_PRINT("display: ");
@@ -233,11 +233,17 @@ void setup() {
     DEBUG_PRINTLN("------ Setup begin ------");
     pinMode(LED_BUILTIN, OUTPUT);
     digitalWrite(LED_BUILTIN, LOW);
+    DEBUG_PRINTLN("- LED Setup completed");
     RTC_setup(false);
+    DEBUG_PRINTLN("- RTC Setup completed");
     MPU_setup();
+    DEBUG_PRINTLN("- MPU Setup completed");
     rotary_setup();
+    DEBUG_PRINTLN("- Rotary Setup completed");
     waterLevel_setup();
+    DEBUG_PRINTLN("- WaterLevel Setup completed");
     display.initialize();
+    DEBUG_PRINTLN("- Display Setup completed");
     timestampIdle = millis();
     DEBUG_PRINTLN("------ Setup ended ------");
 }
@@ -259,11 +265,11 @@ void loop() {
     if (dtSensor > 500) {
         // DEBUG_PRINTLN("Reading sensor data...");
         timestampSensors = millis();
-        MPU.getData();
+        MPU_device.getData();
         DCData = DC_getData(dtSensor);
         WaterData = getWaterData();
-        pushFloatArray(MPUHistory.phiX, MPU.data.phiX, MPU_HISTORY_COUNT);
-        pushFloatArray(MPUHistory.phiY, MPU.data.phiY, MPU_HISTORY_COUNT);
+        pushFloatArray(MPUHistory.phiX, MPU_device.data.phiX, MPU_HISTORY_COUNT);
+        pushFloatArray(MPUHistory.phiY, MPU_device.data.phiY, MPU_HISTORY_COUNT);
         DEBUG_PLOTTER();
     }
 
@@ -273,17 +279,17 @@ void loop() {
     }
 
     // Get new time data
-    RTC.getDateTime();
+    RTC_device.getDateTime();
 
     // Every full hour: -> Save DHT data to arrays
-    if (RTC.isAlarm1()) {
-        RTC.getDateTime();  // update datetime, to prevent offsync between alarm timing and datetime update.
+    if (RTC_device.isAlarm1()) {
+        RTC_device.getDateTime();  // update datetime, to prevent offsync between alarm timing and datetime update.
         pushFloatArray(DCData.energy24, DCData.energy, DC_ENERGY_COUNT);
         DCData.energy = 0;
         // Even hour (every 2 hours): -> save DHT data
-        if (RTC.t.hour % 2 == 0) {
+        if (RTC_device.t.hour % 2 == 0) {
             DEBUG_PRINTLN("Even hour, saving DHT data...");
-            pushInt8Array(DHTHistory.hour, RTC.t.hour, DHT_HISTORY_COUNT);
+            pushInt8Array(DHTHistory.hour, RTC_device.t.hour, DHT_HISTORY_COUNT);
             pushInt8Array(DHTHistory.temperature, DHTData.temperature, DHT_HISTORY_COUNT);
             pushInt8Array(DHTHistory.humidity, DHTData.humidity, DHT_HISTORY_COUNT);
         }
@@ -317,26 +323,26 @@ void (*restartFunc)(void) = 0;  // declare restart function @ address 0
  * @param setTime set true to update the saved time on the RTC device.
  */
 void RTC_setup(bool setTime) {
-    RTC.begin();
+    RTC_device.begin();
 
     // Send sketch compiling time to Arduino (delayed by ~6 seconds!)
     if (setTime) {
-        RTC.setDateTime(__DATE__, __TIME__);
+        RTC_device.setDateTime(__DATE__, __TIME__);
         DEBUG_PRINTLN("Updated RTC time!");
     }
-    RTC.setAlarm1(0, 0, 0, 0, DS3231_MATCH_M_S, false);  // match every hour
-    // RTC.setAlarm2(0, 0, 0, DS3231_EVERY_MINUTE, false);  // match every minute
-    RTC.getDateTime();
+    RTC_device.setAlarm1(0, 0, 0, 0, DS3231_MATCH_M_S, false);  // match every hour
+    // RTC_device.setAlarm2(0, 0, 0, DS3231_EVERY_MINUTE, false);  // match every minute
+    RTC_device.getDateTime();
 }
 
 /*
  * Initialize the MPU device and active the I2C Bypass. Also test the connection.
  */
 void MPU_setup() {
-    if (MPU.testConnection()) {
-        MPU.initialize();
-        MPU.setBypass();
-        MPU.getData();
+    if (MPU_device.testConnection()) {
+        MPU_device.initialize();
+        MPU_device.setBypass();
+        MPU_device.getData();
         DEBUG_PRINTLN("MPU6050 connected successfully!");
     } else {
         DEBUG_PRINTLN("MPU6050 not connected!");
@@ -590,7 +596,7 @@ void display_wake_up() {
  */
 void display_render_header() {
     display.renderHeadline(1);
-    display.renderTime(RTC.t.hour, RTC.t.minute);
+    display.renderTime(RTC_device.t.hour, RTC_device.t.minute);
     display.renderPageNr(0, 19);
 }
 
@@ -599,7 +605,7 @@ void display_render_header() {
  */
 void display_render_footer() {
     display.renderFootline(6);
-    display.renderDate(RTC.t.day, RTC.t.month, RTC.t.year, 7, 0);
+    display.renderDate(RTC_device.t.day, RTC_device.t.month, RTC_device.t.year, 7, 0);
     display.renderTemperature(DHTData.temperature, 7, 18);
 }
 
@@ -789,11 +795,11 @@ void DEBUG_PRINT_FLOAT_ARRAY(float *array, uint8_t count) {
 void DEBUG_PLOTTER() {
 #ifdef PLOTTER
     Serial.print(F("Time:"));
-    Serial.print(RTC.t.hour);
+    Serial.print(RTC_device.t.hour);
     Serial.print(F(":"));
-    Serial.print(RTC.t.minute);
+    Serial.print(RTC_device.t.minute);
     Serial.print(F(":"));
-    Serial.print(RTC.t.second);
+    Serial.print(RTC_device.t.second);
     Serial.print(F(","));
     Serial.print(F("Temperature:"));
     Serial.print(DHTData.temperature);
@@ -802,31 +808,31 @@ void DEBUG_PLOTTER() {
     Serial.print(DHTData.humidity);
     Serial.print(F(","));
     Serial.print(F("AcX:"));
-    Serial.print(MPU.data.AcX);
+    Serial.print(MPU_device.data.AcX);
     Serial.print(F(","));
     Serial.print(F("AcY:"));
-    Serial.print(MPU.data.AcY);
+    Serial.print(MPU_device.data.AcY);
     Serial.print(F(","));
     Serial.print(F("AcZ:"));
-    Serial.print(MPU.data.AcZ);
+    Serial.print(MPU_device.data.AcZ);
     Serial.print(F(","));
     Serial.print(F("GyX:"));
-    Serial.print(MPU.data.GyX);
+    Serial.print(MPU_device.data.GyX);
     Serial.print(F(","));
     Serial.print(F("GyY:"));
-    Serial.print(MPU.data.GyY);
+    Serial.print(MPU_device.data.GyY);
     Serial.print(F(","));
     Serial.print(F("GyZ:"));
-    Serial.print(MPU.data.GyZ);
+    Serial.print(MPU_device.data.GyZ);
     Serial.print(F(","));
     Serial.print(F("MPU-Temp:"));
-    Serial.print(MPU.data.Temp);
+    Serial.print(MPU_device.data.Temp);
     Serial.print(F(","));
     Serial.print(F("phiX:"));
-    Serial.print(MPU.data.phiX);
+    Serial.print(MPU_device.data.phiX);
     Serial.print(F(","));
     Serial.print(F("phiY:"));
-    Serial.print(MPU.data.phiY);
+    Serial.print(MPU_device.data.phiY);
     Serial.print(F(","));
     Serial.print(F("Voltage:"));
     Serial.print(DCData.voltage);

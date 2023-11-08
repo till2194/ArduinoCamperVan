@@ -72,7 +72,7 @@ void MPU6050::getAcceleration(float &AcX, float &AcY, float &AcZ) {
     Wire.beginTransmission(devAddr);
     Wire.write(MPU6050_RA_ACCEL_XOUT_H);  // starting with register 0x3B (ACCEL_XOUT_H)
     Wire.endTransmission(false);
-    Wire.requestFrom(devAddr, (uint8_t)6, (uint8_t) true);  // request a total of 6 registers
+    WIRE_REQUEST_FROM(devAddr, 6, true);
     int16_t AcX_read = Wire.read() << 8 | Wire.read();      // 0x3B (ACCEL_XOUT_H) & 0x3C (ACCEL_XOUT_L)
     int16_t AcY_read = Wire.read() << 8 | Wire.read();      // 0x3D (ACCEL_YOUT_H) & 0x3E (ACCEL_YOUT_L)
     int16_t AcZ_read = Wire.read() << 8 | Wire.read();      // 0x3F (ACCEL_ZOUT_H) & 0x40 (ACCEL_ZOUT_L)
@@ -96,7 +96,7 @@ void MPU6050::getTemperature(float &T) {
     Wire.beginTransmission(devAddr);
     Wire.write(MPU6050_RA_TEMP_OUT_H);  // starting with register 0x43 (TEMP_OUT_H)
     Wire.endTransmission(false);
-    Wire.requestFrom(devAddr, (uint8_t)2, (uint8_t) true);  // request a total of 2 registers
+    WIRE_REQUEST_FROM(devAddr, 2, true);
     int16_t T_read = Wire.read() << 8 | Wire.read();                // 0x3B (TEMP_OUT_H) & 0x3C (TEMP_OUT_L)
 
     T_read += MPU6050_OFFSET_temp;
@@ -114,7 +114,7 @@ void MPU6050::getGyroscope(float &GyX, float &GyY, float &GyZ) {
     Wire.beginTransmission(devAddr);
     Wire.write(MPU6050_RA_GYRO_XOUT_H);  // starting with register 0x43 (GYRO_XOUT_H)
     Wire.endTransmission(false);
-    Wire.requestFrom(devAddr, (uint8_t)6, (uint8_t) true);  // request a total of 6 registers
+    WIRE_REQUEST_FROM(devAddr, 6, true);
     int16_t GyX_read = Wire.read() << 8 | Wire.read();                   // 0x43 (GYRO_XOUT_H) & 0x44 (GYRO_XOUT_L)
     int16_t GyY_read = Wire.read() << 8 | Wire.read();                   // 0x45 (GYRO_YOUT_H) & 0x46 (GYRO_YOUT_L)
     int16_t GyZ_read = Wire.read() << 8 | Wire.read();                   // 0x48 (GYRO_ZOUT_H) & 0x47 (GYRO_ZOUT_L)
@@ -171,7 +171,7 @@ uint8_t MPU6050::readByte(uint8_t devAddr, uint8_t regAddr) {
     Wire.beginTransmission(devAddr);
     Wire.write(regAddr);
     Wire.endTransmission(false);
-    Wire.requestFrom(devAddr, (uint8_t)1, (uint8_t) true);
+    WIRE_REQUEST_FROM(devAddr, 1, true);
     uint8_t dataByte = Wire.read();
     return dataByte;
 }

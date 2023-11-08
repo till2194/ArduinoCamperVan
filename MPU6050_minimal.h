@@ -13,6 +13,15 @@
 #include "Arduino.h"
 #include "Wire.h"
 
+// Wire Nano Every support
+#define WIRE_NANOEVERY false  // Set to true for Nano Every Support (there seems to be a problem of different Wire requestFrom definitions)
+
+#if WIRE_NANOEVERY
+  #define WIRE_REQUEST_FROM(address, quantity, sendStop) Wire.requestFrom((uint8_t) address, (size_t) quantity, (bool) sendStop)
+#else
+  #define WIRE_REQUEST_FROM(address, quantity, sendStop) Wire.requestFrom((uint8_t) address, (uint8_t) quantity, (uint8_t) sendStop)
+#endif
+
 // Register addresses
 #define MPU6050_RA_PWR_MGMT_1 0x6B    // [7] DEVICE_RESET, [6] SLEEP, [5] CYCLE, [3] TEMP_DIS, [2:0] CLKSEL
 #define MPU6050_RA_GYRO_CONFIG 0x1B   // [7] XG_ST, [6] YG_ST, [5] ZG_ST, [4:3] FS_SEL
