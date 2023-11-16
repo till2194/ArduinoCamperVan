@@ -45,18 +45,18 @@
     - 1.3" OLED display SH1106 128x64 (I2C)
         - VDD 3.3V (black)
         - GND (white)
-        - SCK (grey)
-        - SDA (purple)
-    - Rotary encoder KY-040 
+        - SCK (inside: blue; cable: grey)
+        - SDA (inside: green; cable: purple)
+    - Rotary encoder KY-040
         - GND (brown)
-        - +/VCC 5V (red)
-        - SW interrupt (orange)
-        - DT digital (yellow)
-        - CLK digital (green)
+        - +/VCC 5V (inside: red; cable: white)
+        - SW interrupt (inside: orange; cable: green)
+        - DT digital (inside: yellow; cable: brown)
+        - CLK digital (inside: green; cable: yellow)
     - Temperature and humidity sensor DHT11
-        - GND (right pin)
-        - VCC 5V
-        - Data digtal (left pin)
+        - GND, right pin (brown)
+        - VCC 5V (orange)
+        - Data digtal, left pin (red)
     - Current sensor ACS712 30A
         - VCC 5V (yellow)
         - OUT analog (blue)
@@ -80,15 +80,15 @@
          GND <-> GND distribution
          GND
          Vin
-          A0 <-> Analog voltage sensor (S pin)
-          A1 <-> Analog current sensor (data pin)
+          A0 <-> Analog voltage sensor (green)
+          A1 <-> Analog current sensor (blue)
           A2
           A3
-    (SDA) A4
-    (SCL) A5
+    (SDA) A4 <-> Display I2C data (green)
+    (SCL) A5 <-> Display I2C clock (blue)
 
-         SCL <-> I2C clock
-         SDA <-> I2C data
+         SCL <-> RTC I2C clock (orange)
+         SDA <-> RTC I2C data (green)
         AREF
          GND
           13
@@ -97,12 +97,12 @@
     (PWM) 10
     (PWM)  9
            8
-           7 <-> DHT11 data (data pin)
-    (PWM)  6 <-> Rotary encoder clock (CLK pin)
-    (PWM)  5 <-> Rotary encoder data (DT pin)
-           4 <-> Water switch for grey water
-    (PWM)  3 <-> Water switch for fresh water
-    (INT)  2 <-> Rotary encoder switch (SW pin)
+           7 <-> DHT11 data (red)
+    (PWM)  6 <-> Rotary encoder clock (green)
+    (PWM)  5 <-> Rotary encoder data (yellow)
+           4 <-> Water switch for grey water (black)
+    (PWM)  3 <-> Water switch for fresh water (grey)
+    (INT)  2 <-> Rotary encoder switch (orange)
     (TX)   1
     (RX)   0
 */
@@ -114,6 +114,10 @@
 #include "Rotary.h"           // Library: Encoder https://github.com/buxtronix/arduino/tree/master/libraries/Rotary
 #include "dht_nonblocking.h"  // Library: DHT sensor
 #include "display.h"          // Display based on lcdgfx library https://github.com/lexus2k/lcdgfx
+
+// ---------------------- Settings ----------------------
+// #define ROTARY_INTERRUPT      // active: interrupt mode of rotary switch; not active: polling mode
+#define RTC_RESET_TIME false  // true: set time for RTC.
 
 // --------------------- Debug Mode ---------------------
 // #define DEBUG    // switch to (de)activate serial debug output
@@ -132,7 +136,6 @@
 #endif
 
 // ---------------------- Defines -----------------------
-// #define ROTARY_INTERRUPT      // active: interrupt mode of rotary switch; not active: polling mode
 #define MPU_I2C_ADDR 0x69     // I2C address of the MPU sensor (0x68 for AD0=LOW, 0x69 for AD0=HIGH)
 #define DHT_TYPE DHT_TYPE_11  // Type of DHT sensor
 #define ROTARY_PIN_SW 2       // Rotary switch pin (interrupt/poll)
@@ -235,7 +238,7 @@ void setup() {
     pinMode(LED_BUILTIN, OUTPUT);
     digitalWrite(LED_BUILTIN, LOW);
     DEBUG_PRINTLN("- LED Setup completed");
-    RTC_setup(false);
+    RTC_setup(RTC_RESET_TIME);
     DEBUG_PRINTLN("- RTC Setup completed");
     MPU_setup();
     DEBUG_PRINTLN("- MPU Setup completed");
@@ -658,7 +661,7 @@ void display_menu_battery() {
 void display_menu_DHT() {
     display_render_header();
     char buffer[25];
-    if (display.getMenuItem() == 1) {
+    if (display.getMenuItem() >= 1) {
         // show scrolling
         sprintf(buffer, "Vergangene Werte:<->");
     } else {
