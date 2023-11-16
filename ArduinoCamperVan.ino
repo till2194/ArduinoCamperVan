@@ -116,7 +116,7 @@
 #include "display.h"          // Display based on lcdgfx library https://github.com/lexus2k/lcdgfx
 
 // --------------------- Debug Mode ---------------------
-#define DEBUG    // switch to (de)activate serial debug output
+// #define DEBUG    // switch to (de)activate serial debug output
 // #define PLOTTER  // switch to (de)activate serial plotter output
 
 #ifdef DEBUG
@@ -132,9 +132,10 @@
 #endif
 
 // ---------------------- Defines -----------------------
+// #define ROTARY_INTERRUPT      // active: interrupt mode of rotary switch; not active: polling mode
 #define MPU_I2C_ADDR 0x69     // I2C address of the MPU sensor (0x68 for AD0=LOW, 0x69 for AD0=HIGH)
 #define DHT_TYPE DHT_TYPE_11  // Type of DHT sensor
-#define ROTARY_PIN_SW 2       // Rotary switch pin (interrupt)
+#define ROTARY_PIN_SW 2       // Rotary switch pin (interrupt/poll)
 #define FRESH_WATER_PIN 3     // Water (fresh) switch pin (digital)
 #define GREY_WATER_PIN 4      // Water (grey) switch pin (digital)
 #define ROTARY_PIN_DT 5       // Rotary data pin (digital)
@@ -234,7 +235,7 @@ void setup() {
     pinMode(LED_BUILTIN, OUTPUT);
     digitalWrite(LED_BUILTIN, LOW);
     DEBUG_PRINTLN("- LED Setup completed");
-    // RTC_setup(false);
+    RTC_setup(false);
     DEBUG_PRINTLN("- RTC Setup completed");
     MPU_setup();
     DEBUG_PRINTLN("- MPU Setup completed");
@@ -259,6 +260,12 @@ void loop() {
         DEBUG_PRINTLN("Rotary was turned CCW");
         rotary_turn(-1);
     }
+
+    #ifndef ROTARY_INTERRUPT
+    if (digitalRead(ROTARY_PIN_SW) == LOW) {
+        rotary_interrupt();
+    }
+    #endif
 
     // Sensor readings:
     unsigned long dtSensor = millis() - timestampSensors;
@@ -363,11 +370,15 @@ void waterLevel_setup() {
 
 /*
  * Setup for the rotary switch.
- * Select the pin mode and attatch the interrupt handler to the interrupt pin.
+ * Select the pin mode and attatch the interrupt handler to the interrupt pin in interrupt mode.
  */
 void rotary_setup() {
     pinMode(ROTARY_PIN_SW, INPUT);                                                    // Definition of the interrupt pin and handler
-    attachInterrupt(digitalPinToInterrupt(ROTARY_PIN_SW), rotary_interrupt, RISING);  // Ausführung der Interrupt Funktion bei steigender Flanke (Switch wird wieder losgelassen)
+    digitalWrite(ROTARY_PIN_SW, HIGH);                                                // Activate input pullup
+
+    #ifdef ROTARY_INTERRUPT
+    attachInterrupt(digitalPinToInterrupt(ROTARY_PIN_SW), rotary_interrupt, RISING);  // Attach Interrupt function at rising input (time when switch is depressed)
+    #endif
 }
 
 // ------------------------ Reads -----------------------
@@ -477,7 +488,7 @@ static bool DHT_read(float *temperatureMes, float *humidityMes) {
  * User input by interrupt switch. Enter or leave the menu.
  */
 void rotary_interrupt() {
-    if (millis() - timestampInterrupt > 200) {
+    if (millis() - timestampInterrupt > 500) {
         DEBUG_PRINTLN("Switch has been pressed");
         timestampInterrupt = millis();
         timestampIdle = millis();
