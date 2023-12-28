@@ -148,7 +148,7 @@
 #define VOLTAGE_PIN A0        // Voltage read pin (analog)
 #define CURRENT_PIN A1        // Current read pin (analog)
 
-#define DHT_HISTORY_COUNT 12  // Number of DHT history data
+#define DHT_HISTORY_COUNT 24  // Number of DHT history data
 #define MPU_HISTORY_COUNT 10  // Number of MPU history data
 #define DC_ENERGY_COUNT 24    // Number of DC energy history data
 #define STANDBY_DELAY 60      // Time till standby (in s)
@@ -185,6 +185,7 @@ struct DCDataType  // Data type for DC information
     float current;                      // Current value in A
     float power;                        // Power value in W
     float energy;                       // Energy accumulation Ah of the last hour
+    int soc;                            // State of charge of the battery
     float energy24[DC_ENERGY_COUNT];    // Energy data in Ah of the last 24 hours
 };
 
@@ -197,7 +198,7 @@ DHTDataType DHTData;                                    // DHT struct from the D
 DHTHistoryType DHTHistory;                              // DHT struct for DHT sensor history
 Rotary rotary = Rotary(ROTARY_PIN_DT, ROTARY_PIN_CLK);  // Rotary Definition als Poll
 WaterDataType WaterData = {true, false};                // Water struct for freshwater and greywater sensors
-DCDataType DCData;                                      // DC struct for current, voltage and power
+DCDataType DCData = {0, 0, 0, 0, 0};                    // DC struct for current, voltage and power
 displayOscar display(-1);                               // Display class inherited from lcdgfx
 
 // ------------------ Global Variables ------------------
@@ -291,19 +292,14 @@ void loop() {
     // Get new time data
     RTC_device.getDateTime();
 
-    // Every full hour: -> Save DHT data to arrays
+    // Every full hour: -> Save data to history arrays
     if (RTC_device.isAlarm1()) {
         RTC_device.getDateTime();  // update datetime, to prevent offsync between alarm timing and datetime update.
-        // Every full hour: -> Save Energy Data to array
         pushFloatArray(DCData.energy24, DCData.energy, DC_ENERGY_COUNT);
         DCData.energy = 0;
-        // Even hour (every 2 hours): -> save DHT data to arrays
-        if (RTC_device.t.hour % 2 == 0) {
-            DEBUG_PRINTLN("Even hour, saving DHT data...");
-            pushInt8Array(DHTHistory.hour, RTC_device.t.hour, DHT_HISTORY_COUNT);
-            pushInt8Array(DHTHistory.temperature, DHTData.temperature, DHT_HISTORY_COUNT);
-            pushInt8Array(DHTHistory.humidity, DHTData.humidity, DHT_HISTORY_COUNT);
-        }
+        pushInt8Array(DHTHistory.hour, RTC_device.t.hour, DHT_HISTORY_COUNT);
+        pushInt8Array(DHTHistory.temperature, DHTData.temperature, DHT_HISTORY_COUNT);
+        pushInt8Array(DHTHistory.humidity, DHTData.humidity, DHT_HISTORY_COUNT);
     }
 
     // display refresh at 4 fps (main menu needs ~ 30ms, leave some time to poll rotary reading etc.)
@@ -398,9 +394,26 @@ DCDataType DC_getData(unsigned long dt) {
     float voltage = VVout / 0.2;                                        // Input voltage in V of the voltage sensor Vout = Vin / (R2/(R1+R2)); R1=30k, R2=7.5k
     int VIraw = analogRead(CURRENT_PIN);                                // Raw voltage value at the current sensor pin
     float VIout = (analogRead(CURRENT_PIN) * 5000.0 / 1024.0);          // Voltage value in mV of the current sensor (1024: 10bit resolution)
-    float current = ((VIout - 2500.0) / 66.2);                          // Current value in A of the current sensor (2500 mV offset, 66 A/mV)
+    float currentRaw = ((VIout - 2500.0) / 66.2);                       // Current value in A of the current sensor (2500 mV offset, 66 A/mV)
+    
+    // filter current with exponential moving average
+    float alpha = 0.3;                                                  // weight factor (0 < alpha < 1); alpha = 0.3 => tau = 1.4 sec
+    float current = alpha * currentRaw + (1 - alpha) * DCData.current;  // EMA formula
+
     float power = voltage * current;                                    // Power value in W
     float energy = DCData.energy + (current * dt / 1000 / 60 / 60);     // Accumulate the used energy in Ah
+    
+    // Update SoC by voltage only if there is no load
+    int soc = DCData.soc;
+    if (current <= 1) {
+        // Use a simple linear function for SoC estimation
+        float socRaw = 66.576 * voltage - 762.22;
+        if (socRaw <= 0) {
+            soc = 0;
+        } else {
+            soc = (((int) socRaw + 5 ) / 10) * 10;
+        }        
+    }
     // DEBUG_PRINT("VVraw=");
     // DEBUG_PRINTVAR(VVraw);
     // DEBUG_PRINT(", VVout=");
@@ -413,7 +426,7 @@ DCDataType DC_getData(unsigned long dt) {
     // DEBUG_PRINTVAR(VIout);
     // DEBUG_PRINT(", I=");
     // DEBUG_PRINTVARLN(current);
-    return {voltage, current, power, energy};
+    return {voltage, current, power, energy, soc};
 }
 
 /*
@@ -649,6 +662,7 @@ void display_menu_battery() {
     sprintf(buffer, "Batteriewerte:");
     display.renderText(buffer, 0, 2);
 
+    display.renderBatterySOC(DCData.soc, 3);
     display.renderBatteryVoltage(DCData.voltage, 4);
     display.renderBatteryCurrent(DCData.current, 5);
     display.renderBatteryPower(DCData.power, 6);
@@ -678,6 +692,8 @@ void display_menu_DHT() {
     display.renderInt8Array(DHTHistory.temperature, start, end, label, 5);
     sprintf(label, "H");
     display.renderInt8Array(DHTHistory.humidity, start, end, label, 6);
+    sprintf(label, "B");
+    display.renderFloatIntArray(DCData.energy24, start, end, label, 7);
 }
 
 /*

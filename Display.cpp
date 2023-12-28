@@ -186,6 +186,21 @@ void displayOscar::renderFreshWater(bool waterLevel, uint8_t lineNr) {
 }
 
 /*
+ * Render information about the battery state of charge.
+ * Fills the whole line.
+ * @param soc State of charge in %
+ * @param lineNr Line position Y (0-7) to render to. Default: 0
+ */
+void displayOscar::renderBatterySOC(int soc, uint8_t lineNr = 0) {
+    char buffer[25];
+    sprintf(buffer, "Ladung:");
+    printFixed(calcCursorX(0), calcCursorY(lineNr), buffer);
+    buffer[0] = 0;
+    sprintf(buffer, "%2d %%", soc);
+    printFixed(calcCursorX(16), calcCursorY(lineNr), buffer);
+}
+
+/*
  * Render information about the battery voltage.
  * Fills the whole line.
  * @param voltage Voltage in V.
@@ -199,7 +214,7 @@ void displayOscar::renderBatteryVoltage(float voltage, uint8_t lineNr) {
     printFixed(calcCursorX(0), calcCursorY(lineNr), buffer);
     buffer[0] = 0;
     sprintf(buffer, "%5s V", helper);
-    printFixed(calcCursorX(14), calcCursorY(lineNr), buffer);
+    printFixed(calcCursorX(13), calcCursorY(lineNr), buffer);
 }
 
 /*
@@ -216,7 +231,7 @@ void displayOscar::renderBatteryCurrent(float current, uint8_t lineNr) {
     printFixed(calcCursorX(0), calcCursorY(lineNr), buffer);
     buffer[0] = 0;
     sprintf(buffer, "%5s A", helper);
-    printFixed(calcCursorX(14), calcCursorY(lineNr), buffer);
+    printFixed(calcCursorX(13), calcCursorY(lineNr), buffer);
 }
 
 /*
@@ -233,7 +248,7 @@ void displayOscar::renderBatteryPower(float power, uint8_t lineNr) {
     printFixed(calcCursorX(0), calcCursorY(lineNr), buffer);
     buffer[0] = 0;
     sprintf(buffer, "%5s W", helper);
-    printFixed(calcCursorX(14), calcCursorY(lineNr), buffer);
+    printFixed(calcCursorX(13), calcCursorY(lineNr), buffer);
 }
 
 /*
@@ -281,6 +296,34 @@ void displayOscar::renderInt8Array(int8_t* array, uint8_t startN, uint8_t endN, 
             sprintf(buffer2, "%2d ", array[i]);
         } else {
             sprintf(buffer2, "%2d", array[i]);
+        }
+        strcat(buffer1, buffer2);
+        buffer2[0] = 0;
+    }
+    printFixed(calcCursorX(0), calcCursorY(lineNr), buffer1);
+}
+
+/*
+ * Render a whole float integer array which gets converted to int with a one char label to the display.
+ * Fills the whole line, not overflow protected, care length of array.
+ * @param array Integer array to render.
+ * @param startN First item to print.
+ * @param endN Last item to print.
+ * @param label One char to label the data.
+ * @param lineNr Line position Y (0-7) to render to. Default: 0
+ */
+void displayOscar::renderFloatIntArray(float* array, uint8_t startN, uint8_t endN, char* label, uint8_t lineNr) {
+    char buffer1[25];
+    char buffer2[25];
+    sprintf(buffer1, "%s: ", label);
+    // printFixed(calcCursorX(0), calcCursorY(lineNr), buffer);
+
+    for (uint8_t i = startN; i <= endN; i++) {
+        int value = array[i] + 0.5;
+        if (i < endN) {
+            sprintf(buffer2, "%2d ", value);
+        } else {
+            sprintf(buffer2, "%2d", value);
         }
         strcat(buffer1, buffer2);
         buffer2[0] = 0;
