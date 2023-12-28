@@ -392,17 +392,18 @@ void rotary_setup() {
 DCDataType DC_getData(unsigned long dt) {
     int VVraw = analogRead(VOLTAGE_PIN);                                // Raw voltage value at the voltage sensor pin
     float VVout = analogRead(VOLTAGE_PIN) * 5.0 / 1024.0;               // Voltage value in V of the voltage sensor (1024: 10bit resolution)
-    float voltage = VVout / 0.2;                                        // Input voltage in V of the voltage sensor Vout = Vin / (R2/(R1+R2)); R1=30k, R2=7.5k
+    float voltageRaw = VVout / 0.2;                                     // Input voltage in V of the voltage sensor Vout = Vin / (R2/(R1+R2)); R1=30k, R2=7.5k
     int VIraw = analogRead(CURRENT_PIN);                                // Raw voltage value at the current sensor pin
     float VIout = (analogRead(CURRENT_PIN) * 5000.0 / 1024.0);          // Voltage value in mV of the current sensor (1024: 10bit resolution)
-    float currentRaw = ((VIout - 2500.0) / 66.2);                       // Current value in A of the current sensor (2500 mV offset, 66 A/mV)
+    float currentRaw = -((VIout - 2500.0) / 66.2);                      // Current value in A of the current sensor (2500 mV offset, 66 A/mV)
     
-    // filter current with exponential moving average
+    // filter current and voltage with exponential moving average
     float alpha = 0.3;                                                  // weight factor (0 < alpha < 1); alpha = 0.3 => tau = 1.4 sec
     float current = alpha * currentRaw + (1 - alpha) * DCData.current;  // EMA formula
+    float voltage = alpha * voltageRaw + (1 - alpha) * DCData.voltage;  // EMA formula
 
-    float power = voltage * current;                                    // Power value in W
-    float energy = DCData.energy + (current * dt / 1000 / 60 / 60);     // Accumulate the used energy in Ah
+    float power = voltage * current;                                        // Power value in W
+    float energy = DCData.energy + (current * dt / 1000.0 / 60.0 / 60.0);   // Accumulate the used energy in Ah (dt in ms)
     
     // Update SoC by voltage only if there is no load
     int soc = DCData.soc;
@@ -415,18 +416,6 @@ DCDataType DC_getData(unsigned long dt) {
             soc = (((int) socRaw + 5 ) / 10) * 10;
         }        
     }
-    // DEBUG_PRINT("VVraw=");
-    // DEBUG_PRINTVAR(VVraw);
-    // DEBUG_PRINT(", VVout=");
-    // DEBUG_PRINTVAR(VVout);
-    // DEBUG_PRINT(", V=");
-    // DEBUG_PRINTVAR(voltage);
-    // DEBUG_PRINT(" | VIraw=");
-    // DEBUG_PRINTVAR(VIraw);
-    // DEBUG_PRINT(", VIout=");
-    // DEBUG_PRINTVAR(VIout);
-    // DEBUG_PRINT(", I=");
-    // DEBUG_PRINTVARLN(current);
     return {voltage, current, power, energy, soc};
 }
 
