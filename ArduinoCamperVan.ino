@@ -738,6 +738,13 @@ void display_menu_clock() {
 
     sprintf(buffer, "Uhr Einstellungen:");
     display.renderText(buffer, 0, 2);
+    
+    // DEBUGGING WATER LEVELS
+    bool fw = getWaterLevel(3);
+    bool aw = getWaterLevel(4);
+    sprintf(buffer, "FW(3) %d, AW(4) %d", fw, aw);
+    display.renderText(buffer, 0, 3);
+
     display.renderTime(RTCSettings.hour, RTCSettings.minute, 5, 9);
     display.renderDate(RTCSettings.day, RTCSettings.month, RTCSettings.year, 7, 4);
 
