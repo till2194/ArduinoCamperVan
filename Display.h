@@ -11,6 +11,7 @@ typedef enum {
     MENU_MAIN,
     MENU_BATTERY,
     MENU_DHT,
+    MENU_CLOCK,
     MENU_RESTART,
     COUNT
 } DISPLAY_STATE;

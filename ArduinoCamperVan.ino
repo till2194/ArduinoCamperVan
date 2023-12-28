@@ -200,6 +200,7 @@ Rotary rotary = Rotary(ROTARY_PIN_DT, ROTARY_PIN_CLK);  // Rotary Definition als
 WaterDataType WaterData = {true, false};                // Water struct for freshwater and greywater sensors
 DCDataType DCData = {0, 0, 0, 0, 0};                    // DC struct for current, voltage and power
 displayOscar display(-1);                               // Display class inherited from lcdgfx
+RTCDateTime RTCSettings;                                // Date time to set a new time for RTC device
 
 // ------------------ Global Variables ------------------
 unsigned long timestampIdle = 0;       // Timestamp since last user action
@@ -525,6 +526,20 @@ void rotary_interrupt() {
                         break;
                 }
                 break;
+            case MENU_CLOCK:
+                // go through all clock items (i.e. hour, minute, day, month, year)
+                switch (menuItem) {
+                    case 5:     // last item (year)
+                        display.setMenuItem(0);
+                        RTC_device.getDateTime();
+                        // update time on RTC device (but use the old seconds)
+                        RTC_device.setDateTime(RTCSettings.year, RTCSettings.month, RTCSettings.day, RTCSettings.hour, RTCSettings.minute, RTC_device.t.second);
+                        break;
+                    default:    // select next item
+                        display.setMenuItem(counter(menuItem, 1, 0, 5, false));
+                        break;
+                }
+                break;
             case MENU_RESTART:
                 switch (menuItem) {
                     case 0:
@@ -562,7 +577,7 @@ void rotary_turn(int8_t direction) {
             display_wake_up();
         } else {
             // scroll through menus
-            display.setDisplayState(static_cast<DISPLAY_STATE>(counter(displayState, direction, 1, COUNT - 1)));
+            display.setDisplayState(static_cast<DISPLAY_STATE>(counter(displayState, direction, 1, COUNT - 1, false)));
             display.clear();
         }
     } else {
@@ -570,11 +585,33 @@ void rotary_turn(int8_t direction) {
         switch (displayState) {
             case MENU_DHT:
                 // scroll through the DHT history data (use menuItem-1 as start point of array to print)
-                display.setMenuItem(counter(menuItem, direction, 1, max(1, DHT_HISTORY_COUNT - 5)));
+                display.setMenuItem(counter(menuItem, direction, 1, max(1, DHT_HISTORY_COUNT - 5), false));
+                break;
+            case MENU_CLOCK:
+                // change the clock items and store them in the settings struct
+                switch (menuItem) {
+                    case 1:     // hour
+                        RTCSettings.hour = counter(RTCSettings.hour, direction, 0, 23, true);
+                        break;
+                    case 2:     // minute
+                        RTCSettings.minute = counter(RTCSettings.minute, direction, 0, 59, true);
+                        break;
+                    case 3:     // day
+                        RTCSettings.day = counter(RTCSettings.day, direction, 1, 31, true);
+                        break;
+                    case 4:     // month
+                        RTCSettings.month = counter(RTCSettings.month, direction, 1, 12, true);
+                        break;
+                    case 5:     // year
+                        RTCSettings.year = counter16(RTCSettings.year, direction, 0, 65535, true);
+                        break;
+                    default:
+                        break;
+                }
                 break;
             case MENU_RESTART:
                 // change yes/no selection
-                display.setMenuItem(counter(menuItem, direction, 1, 2));
+                display.setMenuItem(counter(menuItem, direction, 1, 2, false));
                 break;
             default:
                 break;
@@ -600,6 +637,9 @@ void display_refresh() {
             break;
         case MENU_DHT:
             display_menu_DHT();
+            break;
+        case MENU_CLOCK:
+            display_menu_clock();
             break;
         case MENU_RESTART:
             display_menu_restart();
@@ -697,6 +737,61 @@ void display_menu_DHT() {
 }
 
 /*
+ * Render the menu to change clock data.
+ */
+void display_menu_clock() {
+    uint8_t menuItem = display.getMenuItem();
+
+    display_render_header();
+    char buffer[25];
+    char clearBuffer[25];
+    sprintf(clearBuffer, "                   ");
+
+    sprintf(buffer, "Uhr Einstellungen:");
+    display.renderText(buffer, 0, 2);
+    display.renderTime(RTCSettings.hour, RTCSettings.minute, 5, 9);
+    display.renderDate(RTCSettings.day, RTCSettings.month, RTCSettings.year, 7, 4);
+
+    if (menuItem == 0) {
+        RTCSettings = RTC_device.t;     // get current time
+        // clear selector
+        display.renderText(clearBuffer, 0, 4);
+        display.renderText(clearBuffer, 0, 6);
+    } else {
+        // show selected item
+        switch (menuItem) {
+            case 1:     // hour
+                sprintf(buffer, "__   ");
+                display.renderText(buffer, 9, 4);
+                display.renderText(clearBuffer, 0, 6);
+                break;
+            case 2:     // minute
+                sprintf(buffer, "   __");
+                display.renderText(buffer, 9, 4);
+                display.renderText(clearBuffer, 0, 6);
+                break;
+            case 3:     // day
+                sprintf(buffer, "__        ");
+                display.renderText(clearBuffer, 0, 4);
+                display.renderText(buffer, 4, 6);
+                break;
+            case 4:     // month
+                sprintf(buffer, "   __     ");
+                display.renderText(clearBuffer, 0, 4);
+                display.renderText(buffer, 4, 6);
+                break;
+            case 5:     // year
+                sprintf(buffer, "      ____");
+                display.renderText(clearBuffer, 0, 4);
+                display.renderText(buffer, 4, 6);
+                break;
+            default:
+                break;
+        }
+    }
+}
+
+/*
  * Render the menu to restart the device.
  */
 void display_menu_restart() {
@@ -726,11 +821,47 @@ void display_menu_restart() {
  * @param direction +1/-1 to go up or down the list.
  * @param minValue Minimum item of the list.
  * @param maxValue Maximum item of the list.
+ * @param reset Set true to allow to go from max to min item.
  */
-int counter(int oldValue, int direction, int minValue, int maxValue) {
+int counter(int oldValue, int direction, int minValue, int maxValue, bool reset) {
     int newValue;
-    newValue = max(oldValue + direction, minValue);
-    newValue = min(newValue, maxValue);
+    if (reset) {
+        if (oldValue == minValue && direction < 0) {
+            newValue = maxValue;
+        } else if (oldValue == maxValue && direction > 0) {
+            newValue = minValue;
+        } else {
+            newValue = oldValue + direction;
+        }
+    } else {
+        newValue = max(oldValue + direction, minValue);
+        newValue = min(newValue, maxValue);
+    }
+    return newValue;
+}
+
+/*
+ * Count up and down through a list of items defined by min and max for uint16.
+ * @param oldValue Old list item.
+ * @param direction +1/-1 to go up or down the list.
+ * @param minValue Minimum item of the list.
+ * @param maxValue Maximum item of the list.
+ * @param reset Set true to allow to go from max to min item.
+ */
+int counter16(uint16_t oldValue, uint16_t direction, uint16_t minValue, uint16_t maxValue, bool reset) {
+    int newValue;
+    if (reset) {
+        if (oldValue == minValue && direction < 0) {
+            newValue = maxValue;
+        } else if (oldValue == maxValue && direction > 0) {
+            newValue = minValue;
+        } else {
+            newValue = oldValue + direction;
+        }
+    } else {
+        newValue = max(oldValue + direction, minValue);
+        newValue = min(newValue, maxValue);
+    }
     return newValue;
 }
 
