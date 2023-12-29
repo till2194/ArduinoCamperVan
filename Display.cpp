@@ -189,15 +189,21 @@ void displayOscar::renderFreshWater(bool waterLevel, uint8_t lineNr) {
  * Render information about the battery state of charge.
  * Fills the whole line.
  * @param soc State of charge in %
+ * @param voltage Voltage of battery
  * @param lineNr Line position Y (0-7) to render to. Default: 0
  */
-void displayOscar::renderBatterySOC(int soc, uint8_t lineNr = 0) {
+void displayOscar::renderBatterySOC(int soc, float voltage, uint8_t lineNr = 0) {
     char buffer[25];
     sprintf(buffer, "Ladung:");
     printFixed(calcCursorX(0), calcCursorY(lineNr), buffer);
     buffer[0] = 0;
-    sprintf(buffer, "%2d %%", soc);
-    printFixed(calcCursorX(16), calcCursorY(lineNr), buffer);
+    if (voltage > 13.0) {
+        sprintf(buffer, "laden...");
+        printFixed(calcCursorX(13), calcCursorY(lineNr), buffer);
+    } else {
+        sprintf(buffer, "  %3d %%", soc);
+        printFixed(calcCursorX(13), calcCursorY(lineNr), buffer);
+    }
 }
 
 /*

@@ -95,13 +95,13 @@
           12
     (PWM) 11
     (PWM) 10
-    (PWM)  9
-           8
+    (PWM)  9 <-> LED greywater full front (blue)
+           8 <-> LED freshwater empty back (red)
            7 <-> DHT11 data (red)
     (PWM)  6 <-> Rotary encoder clock (green)
     (PWM)  5 <-> Rotary encoder data (yellow)
            4 <-> Water switch for grey water (black)
-    (PWM)  3 <-> Water switch for fresh water (grey)
+    (PWM)  3 <-> Water switch for fresh water (violet)
     (INT)  2 <-> Rotary encoder switch (orange)
     (TX)   1
     (RX)   0
@@ -144,7 +144,8 @@
 #define ROTARY_PIN_DT 5       // Rotary data pin (digital)
 #define ROTARY_PIN_CLK 6      // Rotary clock pin (digital)
 #define DHT_PIN 7             // DHT data pin (digital)
-#define WATER_LED_PIN 8       // LED pin (digital)
+#define FRESH_WATER_LED_PIN 8 // LED pin for fresh water empty (digital)
+#define GREY_WATER_LED_PIN 9  // LED pin for grey water full (digital)
 #define VOLTAGE_PIN A0        // Voltage read pin (analog)
 #define CURRENT_PIN A1        // Current read pin (analog)
 
@@ -203,10 +204,11 @@ displayOscar display(-1);                               // Display class inherit
 RTCDateTime RTCSettings;                                // Date time to set a new time for RTC device
 
 // ------------------ Global Variables ------------------
-unsigned long timestampIdle = 0;       // Timestamp since last user action
-unsigned long timestampSensors = 0;    // Timestamp since last MPU read
-unsigned long timestampDisplay = 0;    // Timestamp since last display refresh
-unsigned long timestampInterrupt = 0;  // Timestamp since last interrupt
+unsigned long timestampIdle = 0;            // Timestamp since last user action
+unsigned long timestampSensors = 0;         // Timestamp since last MPU read
+unsigned long timestampDisplay = 0;         // Timestamp since last display refresh
+unsigned long timestampInterrupt = 0;       // Timestamp since last interrupt
+unsigned long timestampFreshWaterLED = 0;   // Timestamp since the LED turned on
 
 // --------------------- Main Setup ---------------------
 void setup() {
@@ -364,8 +366,10 @@ void MPU_setup() {
 void waterLevel_setup() {
     pinMode(GREY_WATER_PIN, INPUT_PULLUP);
     pinMode(FRESH_WATER_PIN, INPUT_PULLUP);
-    pinMode(WATER_LED_PIN, OUTPUT);
-    digitalWrite(WATER_LED_PIN, LOW);
+    pinMode(FRESH_WATER_LED_PIN, OUTPUT);
+    digitalWrite(FRESH_WATER_LED_PIN, LOW);
+    pinMode(GREY_WATER_LED_PIN, OUTPUT);
+    digitalWrite(GREY_WATER_LED_PIN, LOW);
 }
 
 /*
@@ -407,11 +411,11 @@ DCDataType DC_getData(unsigned long dt) {
     
     // Update SoC by voltage only if there is no load
     int soc = DCData.soc;
-    if (current <= 1) {
+    if (current <= 1.0) {
         // Use a simple linear function for SoC estimation
         float socRaw = 66.576 * voltage - 762.22;
-        if (socRaw <= 0) {
-            soc = 0;
+        if (socRaw <= 0.0) {
+            soc = 0.0;
         } else {
             soc = (((int) socRaw + 5 ) / 10) * 10;
         }        
@@ -429,11 +433,16 @@ WaterDataType getWaterData() {
     newWaterData.grey = getWaterLevel(GREY_WATER_PIN);
     newWaterData.fresh = getWaterLevel(FRESH_WATER_PIN);
 
-    if (newWaterData.grey && (newWaterData.grey != WaterData.grey)) {
-        DEBUG_PRINTLN("Greywater maximum reached!");
-        timestampIdle = millis();
-        if (display.getDisplayState() == STANDBY) {
-            display_wake_up();
+    if (newWaterData.grey != WaterData.grey) {
+        if (newWaterData.grey) {
+            DEBUG_PRINTLN("Greywater maximum reached!");
+            digitalWrite(GREY_WATER_LED_PIN, HIGH);  // turn on LED
+            timestampIdle = millis();
+            if (display.getDisplayState() == STANDBY) {
+                display_wake_up();
+            }
+        } else {
+            digitalWrite(GREY_WATER_LED_PIN, LOW);  // turn off LED
         }
     }
 
@@ -442,15 +451,20 @@ WaterDataType getWaterData() {
         if (!newWaterData.fresh) {
             // Fresh water gets empty
             DEBUG_PRINTLN("Freshwater minimum reached!");
-            digitalWrite(WATER_LED_PIN, HIGH);  // turn on LED
+            digitalWrite(FRESH_WATER_LED_PIN, HIGH);  // turn on LED
             timestampIdle = millis();
+            timestampFreshWaterLED = millis();
             if (display.getDisplayState() == STANDBY) {
                 display_wake_up();
             }
         } else {
             // Fresh water has been refilled
-            digitalWrite(WATER_LED_PIN, LOW);  // turn off LED
+            digitalWrite(FRESH_WATER_LED_PIN, LOW);  // turn off LED
         }
+    }
+
+    if (!newWaterData.fresh & millis() - timestampFreshWaterLED >= 10 * 60 * 1000) {
+        digitalWrite(FRESH_WATER_LED_PIN, LOW);  // turn off LED
     }
 
     return newWaterData;
@@ -691,7 +705,7 @@ void display_menu_battery() {
     sprintf(buffer, "Batteriewerte:");
     display.renderText(buffer, 0, 2);
 
-    display.renderBatterySOC(DCData.soc, 3);
+    display.renderBatterySOC(DCData.soc, DCData.voltage, 3);
     display.renderBatteryVoltage(DCData.voltage, 4);
     display.renderBatteryCurrent(DCData.current, 5);
     display.renderBatteryPower(DCData.power, 6);
@@ -738,12 +752,6 @@ void display_menu_clock() {
 
     sprintf(buffer, "Uhr Einstellungen:");
     display.renderText(buffer, 0, 2);
-    
-    // DEBUGGING WATER LEVELS
-    bool fw = getWaterLevel(3);
-    bool aw = getWaterLevel(4);
-    sprintf(buffer, "FW(3) %d, AW(4) %d", fw, aw);
-    display.renderText(buffer, 0, 3);
 
     display.renderTime(RTCSettings.hour, RTCSettings.minute, 5, 9);
     display.renderDate(RTCSettings.day, RTCSettings.month, RTCSettings.year, 7, 4);

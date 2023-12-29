@@ -148,8 +148,8 @@ void MPU6050::getAngles(float AcX, float AcY, float AcZ, float &phiX, float &phi
     float phiYRaw = asin((xVec[0] * vec[0] + xVec[1] * vec[1] + xVec[2] * vec[2]) / (vecLength(vec) * vecLength(xVec))) * RAD_TO_DEG;
     float phiXRaw = asin((yVec[0] * vec[0] + yVec[1] * vec[1] + yVec[2] * vec[2]) / (vecLength(vec) * vecLength(xVec))) * RAD_TO_DEG;
 
-    phiX = phiXRaw + MPU6050_OFFSET_phiX;
-    phiY = phiYRaw + MPU6050_OFFSET_phiY;
+    phiX = phiXRaw - MPU6050_OFFSET_phiX;
+    phiY = phiYRaw - MPU6050_OFFSET_phiY;
 }
 
 /*

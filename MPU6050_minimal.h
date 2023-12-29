@@ -50,8 +50,8 @@
 #define MPU6050_OFFSET_GyX 0
 #define MPU6050_OFFSET_GyY 0
 #define MPU6050_OFFSET_GyZ 0
-#define MPU6050_OFFSET_phiX 0
-#define MPU6050_OFFSET_phiY 0
+#define MPU6050_OFFSET_phiX 1.0
+#define MPU6050_OFFSET_phiY 1.6
 
 // MPU struct
 #ifndef MPU6050_STRUCT

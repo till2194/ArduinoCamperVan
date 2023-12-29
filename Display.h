@@ -39,7 +39,7 @@ class displayOscar : DisplaySH1106_128x64_I2C {
     void renderBatteryVoltage(float voltage, uint8_t lineNr = 0);
     void renderBatteryCurrent(float current, uint8_t lineNr = 0);
     void renderBatteryPower(float power, uint8_t lineNr = 0);
-    void renderBatterySOC(int soc, uint8_t lineNr = 0);
+    void renderBatterySOC(int soc, float voltage, uint8_t lineNr = 0);
     void renderBatteryEnergy(float* energy24, uint8_t count, uint8_t lineNr = 0);
 
     void renderInt8Array(int8_t* array, uint8_t startN, uint8_t endN, char* label, uint8_t lineNr = 0);
