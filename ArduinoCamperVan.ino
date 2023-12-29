@@ -114,6 +114,7 @@
 #include "Rotary.h"           // Library: Encoder https://github.com/buxtronix/arduino/tree/master/libraries/Rotary
 #include "dht_nonblocking.h"  // Library: DHT sensor
 #include "display.h"          // Display based on lcdgfx library https://github.com/lexus2k/lcdgfx
+#include "LookupTable1D.h"    // 1D lookup Class to interpolate data
 
 // ---------------------- Settings ----------------------
 // #define ROTARY_INTERRUPT      // active: interrupt mode of rotary switch; not active: polling mode
@@ -190,6 +191,9 @@ struct DCDataType  // Data type for DC information
     float energy24[DC_ENERGY_COUNT];    // Energy data in Ah of the last 24 hours
 };
 
+double voltageMap[] = {11.51, 11.66, 11.81, 11.96, 12.10, 12.24, 12.37, 12.50, 12.62, 12.73};   // Battery voltage data
+double socMap[] = {10, 20, 30, 40, 50, 60, 70, 80, 90, 100};                                    // Battery soc data
+
 // --------------- Classes & Data structs ---------------
 MPU6050 MPU_device = MPU6050(MPU_I2C_ADDR);             // MPU6050 accelerometer & gyrosope device
 MPUHistoryType MPUHistory;                              // MPU History data struct with phix and phiy
@@ -202,6 +206,7 @@ WaterDataType WaterData = {true, false};                // Water struct for fres
 DCDataType DCData = {0, 0, 0, 0, 0};                    // DC struct for current, voltage and power
 displayOscar display(-1);                               // Display class inherited from lcdgfx
 RTCDateTime RTCSettings;                                // Date time to set a new time for RTC device
+LookupTable1D batteryLookup(voltageMap, socMap, sizeof(voltageMap) / sizeof(voltageMap[0]));    // 1D Loopup for battery map
 
 // ------------------ Global Variables ------------------
 unsigned long timestampIdle = 0;            // Timestamp since last user action
@@ -412,13 +417,21 @@ DCDataType DC_getData(unsigned long dt) {
     // Update SoC by voltage only if there is no load
     int soc = DCData.soc;
     if (current <= 1.0) {
-        // Use a simple linear function for SoC estimation
-        float socRaw = 66.576 * voltage - 762.22;
+        // Simple linear function for SoC estimation
+        // float socRaw = 66.576 * voltage - 762.22;
+
+        // 1D lookup interpolation
+        float socRaw = batteryLookup.interpolate(voltage);
+
+        // Limits and rounding
         if (socRaw <= 0.0) {
             soc = 0.0;
+        } else if (socRaw >= 100.0) {
+            soc = 100.0;
         } else {
-            soc = (((int) socRaw + 5 ) / 10) * 10;
-        }        
+            // round to nearest 5% value
+            soc = (((int) socRaw + 2.5 ) / 5) * 5;
+        }
     }
     return {voltage, current, power, energy, soc};
 }
