@@ -206,7 +206,7 @@ WaterDataType WaterData = {true, false};                // Water struct for fres
 DCDataType DCData = {0, 0, 0, 0, 0};                    // DC struct for current, voltage and power
 displayOscar display(-1);                               // Display class inherited from lcdgfx
 RTCDateTime RTCSettings;                                // Date time to set a new time for RTC device
-LookupTable1D batteryLookup(voltageMap, socMap, sizeof(voltageMap) / sizeof(voltageMap[0]));    // 1D Loopup for battery map
+// LookupTable1D batteryLookup(voltageMap, socMap, sizeof(voltageMap) / sizeof(voltageMap[0]));    // 1D Loopup for battery map
 
 // ------------------ Global Variables ------------------
 unsigned long timestampIdle = 0;            // Timestamp since last user action
@@ -418,10 +418,10 @@ DCDataType DC_getData(unsigned long dt) {
     int soc = DCData.soc;
     if (current <= 1.0) {
         // Simple linear function for SoC estimation
-        // float socRaw = 66.576 * voltage - 762.22;
+        float socRaw = 66.576 * voltage - 762.22;
 
         // 1D lookup interpolation
-        float socRaw = batteryLookup.interpolate(voltage);
+        // float socRaw = batteryLookup.interpolate(voltage);
 
         // Limits and rounding
         if (socRaw <= 0.0) {
@@ -430,7 +430,7 @@ DCDataType DC_getData(unsigned long dt) {
             soc = 100.0;
         } else {
             // round to nearest 5% value
-            soc = (((int) socRaw + 2.5 ) / 5) * 5;
+            soc = (((int) (socRaw + 2.5) ) / 5) * 5;
         }
     }
     return {voltage, current, power, energy, soc};
